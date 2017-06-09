@@ -1,2 +1,4 @@
 twitter
 oauth
+selenium
+bs4

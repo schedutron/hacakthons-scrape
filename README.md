@@ -1,2 +1,2 @@
-# hacakthons-scrape
-Scraping List of Hacakthons all over the World
+# hackathons-scrape
+Scraping List of Hackathons all over the World

@@ -16,8 +16,13 @@ with open('.env', 'r') as credentials:
 oauth = OAuth(ACCESS_TOKEN, ACCESS_SECRET, CONSUMER_KEY, CONSUMER_SECRET)
 t = Twitter(auth=oauth)
 
-metadata = ['title', 'subtitle', 'description', 'time', 'location', 'tags', 'source', 'link'] #universal json
+metadata = ['title', 'subtitle', 'description', 'time', 'location', 'tags', 'source', 'link', 'prize'] #universal json
 #think about converting time from a string to a time object
+
+#Sources:
+#www.hackathon.io
+#www.hackathon.com
+#www.challengerocket.com
 
 def print_tweet(tweet):
     print(tweet["user"]["name"])
@@ -154,4 +159,66 @@ def from_hackathonDotio(keyword=None):
     for ele in every:
         total.append(parse_hackathonDotio(ele))
 
+    return total
+
+def parse_challengerocketDotcom(ele):
+    data = dict.fromkeys(metadata)
+    data['source'] = 'https://www.challengerocket.com'
+
+    try: #to get time
+        time_data = ele.find('p', {'class':'submit-time'}).contents
+        days = time_data[2].get_text()
+        days = days.replace('d', ' d') #converts '6days' to '6 days'
+        data['time'] = days + ' ' + time_data[0].get_text() #becomes like '6 days till start' or '6 days submit project'
+        data['time'] = data['time'].lower() #looks cleaner in all lowercase
+    except:
+        pass
+
+    try: #to get prize info
+        prize_data = ele.find('p', {'class':'win'}).contents
+        data['prize'] = prize_data[2].get_text()
+        '''amount here need not be the amount given to the winner - for example,
+        it may be the total amount invested for prizes'''
+        if data['prize'].lower() == 'other': #other pops up sometimes
+            data['prize'] = None
+    except:
+        pass
+
+    try: #to get location
+        atoms = ele.find('ul', {'class':'list-panel-item-menu'}) #location list
+        items = [item.get_text() for item in atoms if item != '\n'] #removes all '\n'
+        items.reverse() #so as to display city name before country name and so on...
+        data['location'] = ', '.join(items)
+    except:
+        pass
+
+    try: #to get title
+        anchor = ele.find('h3', {'class':'title'}).contents[1]
+        data['title'] = anchor.get_text()
+    except:
+        pass
+
+    try: #to get link
+        data['link'] = anchor['href']
+    except:
+        pass
+
+    try: #to get description
+        data['description'] = ele.find('p', {'class':'description'}).contents[0].get_text()
+    except:
+        pass
+
+    return data
+
+def from_challengerocketDotcom(keyword=None):
+    if keyword:
+        pass #will add keyword support later
+    with urlopen('https://www.challengerocket.com/list.html') as f:
+        html = f.read()
+    soup = BeautifulSoup(html, 'html.parser')
+    relevant = soup.find('ol', {'class':'full-list grid list is-bg-white js-isotope'}) #finds the element containing hackathons' info
+    blocks = relevant.find_all('li', {'class':'grid-item'})
+    total = []
+    for block in blocks: #an individual block has info of one hackathon
+        total.append(parse_challengerocketDotcom(block))
     return total

@@ -3,7 +3,9 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.keys import Keys #potential use later?
+from selenium.common.exceptions import TimeoutException
 #import traceback
+import requests
 from twitter import Twitter, OAuth, TwitterHTTPError, TwitterStream
 
 from bs4 import BeautifulSoup #some people on web claim lxml to be faster than bs4?
@@ -18,11 +20,13 @@ t = Twitter(auth=oauth)
 
 metadata = ['title', 'subtitle', 'description', 'time', 'location', 'tags', 'source', 'link', 'prize'] #universal json
 #think about converting time from a string to a time object
+#if description is short enough, it will be added to subtitle, and description value would be None
 
 #Sources:
 #www.hackathon.io
 #www.hackathon.com
 #www.challengerocket.com
+#devpost.com
 
 def print_tweet(tweet):
     print(tweet["user"]["name"])
@@ -221,4 +225,67 @@ def from_challengerocketDotcom(keyword=None):
     total = []
     for block in blocks: #an individual block has info of one hackathon
         total.append(parse_challengerocketDotcom(block))
+    return total
+
+def parse_devpostDotcom(ele):
+    data = dict.fromkeys(metadata)
+    data['source'] = "https://devpost.com"
+    try: #to get title
+        content = ele.find('div', {'class':'content'})
+        data['title'] = content.contents[1].get_text().strip()
+    except:
+        pass
+
+    try: #to get location
+        data['location'] = content.find('p', {'class':'challenge-location'}).contents[2].strip()
+    except:
+        pass
+
+    try: #to get subtitle
+        data['subtitle'] = content.find('p', {'class':'challenge-description'}).contents[0].strip()
+    except:
+        pass
+
+    try: #to get prize amount
+        part = ele.find('div', {'class':'prizes clearfix'})
+        suffix = part.find('span', {'class':'action'}) # "IN PRIZES" suffix
+        amount = part.find('span', {'class':'value'})
+        if not amount: #probably non-monetary prizes
+            print(suffix)
+            data['prize'] = suffix.get_text().strip()
+        else:
+            data['prize'] = amount.get_text().strip()
+    except:
+        pass
+
+    try: #to get date
+        time_stuff = ele.find('div', {'class':'submission-time clearfix'})
+        suffix = time_stuff.find('span', {'class':'action'}) #to see whether we have a date range or a deadline for the time value
+        data['time'] = time_stuff.find('span', {'class':'value'}).get_text().strip()
+        if suffix:
+             data['time'] += " " + suffix.get_text().strip().lower()
+    except:
+        pass
+
+    try: #to get link for more info
+        data['link'] = ele.find('a', {'class':'clearfix'})['href']
+    except:
+        pass
+
+    return data
+
+def from_devpostDotcom(keyword=None):
+    total = []
+    page = requests.get('https://devpost.com/hackathons')
+    count = 1
+    while '<a class="button radius" data-browse-challenges="load-more" href="#">Load more hackathons</a>' in page.text:
+        soup = BeautifulSoup(page.text, 'html.parser')
+        relevant = soup.find('div', {'class':'challenge-results'})
+        blocks = relevant.find_all('div', {'class':'row', 'data-browse-challenges':'challenge-listing'})
+        for block in blocks:
+            total.append(parse_devpostDotcom(block))
+
+        count += 1
+        page = requests.get('https://devpost.com/hackathons?page=%s' % count)
+
     return total

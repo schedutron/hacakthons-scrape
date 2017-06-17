@@ -7,7 +7,7 @@ For a quick demo:
 import json, scrapeHack
 events = scrapeHack.from_hackathonDotio()
 ```
-`from_hackathonDotcom()`, `from_challengerocketDotcom()` and `from_devpostDotcom()` can also be used
+`from_hackathonDotcom()`, `from_challengerocketDotcom()`, `from_devpostDotcom()` and `from_eventbriteDotie()` can also be used
 
 To print prettily:
 ```

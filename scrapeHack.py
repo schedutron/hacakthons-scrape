@@ -18,15 +18,17 @@ with open('.env', 'r') as credentials:
 oauth = OAuth(ACCESS_TOKEN, ACCESS_SECRET, CONSUMER_KEY, CONSUMER_SECRET)
 t = Twitter(auth=oauth)
 
-metadata = ['title', 'subtitle', 'description', 'time', 'location', 'tags', 'source', 'link', 'prize'] #universal json
+metadata = ['title', 'subtitle', 'description', 'time', 'location', 'tags', 'source', 'link', 'prize', 'cost'] #universal json
 #think about converting time from a string to a time object
 #if description is short enough, it will be added to subtitle, and description value would be None
+#if prize is null, it need not imply that there are no prizes; one can always visit the hackathon link for more info
 
 #Sources:
 #www.hackathon.io
 #www.hackathon.com
 #www.challengerocket.com
 #devpost.com
+#eventbrite.ie
 
 def print_tweet(tweet):
     print(tweet["user"]["name"])
@@ -275,6 +277,8 @@ def parse_devpostDotcom(ele):
     return data
 
 def from_devpostDotcom(keyword=None):
+    if keyword:
+        pass #will add this functionality later
     total = []
     page = requests.get('https://devpost.com/hackathons')
     count = 1
@@ -287,5 +291,73 @@ def from_devpostDotcom(keyword=None):
 
         count += 1
         page = requests.get('https://devpost.com/hackathons?page=%s' % count)
+
+    return total
+
+def parse_eventbriteDotie(ele):
+    data = dict.fromkeys(metadata)
+    data["source"] = "https://www.eventbrite.ie"
+
+    try: #to get time
+        time_list = ele.find('time', {'class':'list-card__date'}).get_text().strip().split('\n')
+        time_list[1] = time_list[1].lstrip()
+        data['time'] = ', '.join(time_list) #year ambiguity may arise as the data from the site doesn't mention year
+    except:
+        pass
+
+    try: #to get title
+        data['title'] = ele.find('div', {'class':'list-card__title'}).get_text().strip()
+    except:
+        pass
+
+    try: #to get location
+        data['location'] = ele.find('div', {'class':'list-card__venue'}).get_text().strip()
+    except:
+        pass
+
+    try: #to get cost
+        data['cost'] = ele.find('span', {'class':'list-card__label'}).get_text().strip()
+    except:
+        pass
+
+    try: #to get tags
+        tag_elements = ele.find('div', {'class':'list-card__tags'}).find_all('a')
+        if tag_elements:
+            data['tags'] = [anchor.get_text().strip().lstrip('#') for anchor in tag_elements] #removes the '#' as well
+    except:
+        pass
+
+    try: #to get link
+        data['link'] = ele.find('a', {'class':' list-card__main js-event-link js-xd-janus-checkpoint-link '})['href']
+    except:
+        pass
+
+    return data
+
+def from_eventbriteDotie(keyword=None):
+    import json
+
+    if keyword:
+        pass #will add this functionality later
+
+    page = requests.get('https://www.eventbrite.ie/d/worldwide/hackathon/?crt=regular&page=1&sort=best')
+    count = 1
+    total = []
+    while 1:
+        soup = BeautifulSoup(page.text, 'html.parser')
+        checker = soup.find('div', {'class':'text-significant text-heading-secondary l-pad-bot-2 js-search-error-container'})
+        if checker: #we have exhausted the available info
+            break
+
+        relevant = soup.find('div', {'data-automation':'event-list-container'}) #the event list
+        blocks = relevant.find_all('div', {'class':'list-card-v2 l-mar-top-2 js-d-poster'}) #the individual events
+        print('-'*33)
+        print(count)
+        for block in blocks:
+            data = parse_eventbriteDotie(block)
+            total.append(data)
+            print(json.dumps(data, indent=4))
+        count += 1
+        page = requests.get('https://www.eventbrite.ie/d/worldwide/hackathon/?crt=regular&page=%s&sort=best' % count)
 
     return total

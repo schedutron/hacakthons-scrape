@@ -335,8 +335,6 @@ def parse_eventbriteDotie(ele):
     return data
 
 def from_eventbriteDotie(keyword=None):
-    import json
-
     if keyword:
         pass #will add this functionality later
 
@@ -351,12 +349,8 @@ def from_eventbriteDotie(keyword=None):
 
         relevant = soup.find('div', {'data-automation':'event-list-container'}) #the event list
         blocks = relevant.find_all('div', {'class':'list-card-v2 l-mar-top-2 js-d-poster'}) #the individual events
-        print('-'*33)
-        print(count)
         for block in blocks:
-            data = parse_eventbriteDotie(block)
-            total.append(data)
-            print(json.dumps(data, indent=4))
+            total.append(parse_eventbriteDotie(block))
         count += 1
         page = requests.get('https://www.eventbrite.ie/d/worldwide/hackathon/?crt=regular&page=%s&sort=best' % count)
 

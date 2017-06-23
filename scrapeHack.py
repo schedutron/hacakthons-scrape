@@ -29,6 +29,7 @@ metadata = ['title', 'subtitle', 'description', 'time', 'location', 'tags', 'sou
 #www.challengerocket.com
 #devpost.com
 #eventbrite.ie
+#events.bemyapp.com
 
 def print_tweet(tweet):
     print(tweet["user"]["name"])
@@ -354,4 +355,85 @@ def from_eventbriteDotie(keyword=None):
         count += 1
         page = requests.get('https://www.eventbrite.ie/d/worldwide/hackathon/?crt=regular&page=%s&sort=best' % count)
 
+    return total
+
+def parse_bemyappDotcom(ele):
+    data = dict.fromkeys(metadata)
+    data['source'] = 'http://events.bemyapp.com'
+
+    #to get title
+    try:
+        data['title'] = ele.find('h1', {'class':'summary'}).get_text()
+    except:
+        pass
+
+    #to get time
+    try:
+        #gets from-to times as a list
+        duration = ele.find('p', {'class':'event-when'}).contents
+
+        data['time'] = duration[1].get_text().strip() + " " + duration[3].get_text().strip()
+    except:
+        pass
+
+    #to get location
+    try:
+        #gets the raw location
+        location_chunks = ele.find('p', {'class':'adr'}).contents
+
+        #cleans the data to remove whitespace, punctuation, etc.
+        clean = [chunk.get_text().strip().strip('.,') for chunk in location_chunks if not (str(chunk).strip() == '.' or str(chunk).strip() == ',' or str(chunk).strip()=='')][1:]
+
+        data['location'] = ', '.join(clean)
+    except:
+        pass
+
+    #to get description
+    try:
+        data['description'] = ele.find('p', {'class':'description'}).get_text()
+
+        #we keep description less than or equal to 500
+        if len(desc) > 500:
+            data['description'] = data['description'][:497] + '...'
+    except:
+        pass
+
+    #to get tags
+    try:
+        tag_elements = ele.find('span', {'class':'event-tags'}).find_all('a')
+
+        data['tags'] = [tag_element.get_text() for tag_element in tag_elements]
+    except:
+        pass
+
+    #link to be added in the calling function. Sorry for lack of consistency
+
+    return data
+
+def from_bemyappDotcom(keyword=None):
+    if keyword:
+        pass #will add this functionality later
+
+    links = [] #accumulator for the elements' links
+    elements = [''] #just to initiate the loop
+    count = 1
+    while elements:
+        r = requests.get('http://events.bemyapp.com/events/index/page:%s' % count)
+        soup = BeautifulSoup(r.text, 'html.parser')
+        elements = soup.find_all('div', {'class':'post'}) #gets the individual hackathon elements
+        links.extend([element.find('a', {'class':'event-index-logo'})['href'] for element in elements]) #gets the links from the elements
+        count += 1
+
+    total = [] #list to contain the hackathons' info
+    for link in links:
+        url = 'http://events.bemyapp.com' + link
+        r = requests.get(url)
+        '''
+        keeping consistent with the style of other functions, we
+        pass the ele (soup) instead of just the link
+        '''
+        ele = BeautifulSoup(r.text, 'html.parser')
+        data = parse_bemyappDotcom(ele)
+        data['link'] = url
+        total.append(data)
     return total

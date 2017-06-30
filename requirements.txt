@@ -1,0 +1,5 @@
+twitter
+oauth
+selenium
+bs4
+requests

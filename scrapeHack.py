@@ -254,7 +254,6 @@ def parse_devpostDotcom(ele):
         suffix = part.find('span', {'class':'action'}) # "IN PRIZES" suffix
         amount = part.find('span', {'class':'value'})
         if not amount: #probably non-monetary prizes
-            print(suffix)
             data['prize'] = suffix.get_text().strip()
         else:
             data['prize'] = amount.get_text().strip()

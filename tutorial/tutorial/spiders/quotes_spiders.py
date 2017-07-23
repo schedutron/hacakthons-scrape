@@ -19,7 +19,6 @@ class QuotesSpider(scrapy.Spider):
                 "author": quote.css("small.author::text").extract_first(),
                 "tags": quote.css("div.tags a.tag::text").extract_first(),
             }
-        next_page = response.css("li.next a::attr(href)").extract_first()
-        if next_page is not None:
+        for href in response.css("li.next a::attr(href)"):
             # response.follow works with relative links as well.
-            yield response.follow(next_page, callback=self.parse)
+            yield response.follow(href, callback=self.parse)

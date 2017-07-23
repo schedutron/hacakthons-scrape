@@ -103,3 +103,5 @@ ENV/
 scrape/
 selenium
 scrape
+cron_experiment.txt
+browser.py
